@@ -53,3 +53,4 @@ dkms.conf
 out/
 .idea/
 /.idea/vcs.xml
+/cmake-build-debug/

@@ -13,6 +13,9 @@ assembly_dir = src/arch/$(arch)
 assembly_source = $(wildcard src/arch/$(arch)/*.asm)
 assembly_object = $(patsubst src/arch/$(arch)/%.asm, $(output_dir)/arch/$(arch)/%.o, $(assembly_source))
 
+c_src = $(wildcard src/arch/$(arch)/*.c)
+c_obj = $(patsubst src/arch/$(arch)/%.c, $(output_dir)/arch/$(arch)/%.o, $(c_src))
+
 kernel = $(output_dir)/kernel.bin
 iso = $(output_dir)/os-$(arch).iso
 
@@ -28,9 +31,8 @@ mkdir:
 grub: $(grub_cfg)
 	cp ./$(grub_cfg) $(output_dir)/$(grub_dir)
 
-$(kernel): $(assembly_object)
-	echo $(assembly_object)
-	ld -n -T $(assembly_ld) -o $(kernel) $(assembly_object)
+$(kernel): $(assembly_object) $(c_obj)
+	ld -n -T $(assembly_ld) -o $(kernel) $(assembly_object) $(c_obj)
 
 
 $(iso): $(kernel) $(grub_cfg)
@@ -52,3 +54,7 @@ clean:
 $(output_dir)/arch/$(arch)/%.o: $(assembly_dir)/%.asm
 	mkdir -p $(shell dirname $@)
 	nasm -f elf64 $< -o $@
+
+$(output_dir)/arch/$(arch)/%.o: src/arch/$(arch)/%.c
+	mkdir -p $(shell dirname $@)
+	clang -c -fno-builtin -O $< -o $@
