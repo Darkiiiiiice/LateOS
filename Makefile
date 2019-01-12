@@ -1,0 +1,54 @@
+
+arch ?= x86_64
+
+output_dir = out
+grub_dir = boot/grub
+kernel_dir = boot
+iso_dir = isofiles
+
+grub_cfg = src/arch/$(arch)/grub/grub.cfg
+
+assembly_ld = src/arch/$(arch)/linker.ld
+assembly_dir = src/arch/$(arch)
+assembly_source = $(wildcard src/arch/$(arch)/*.asm)
+assembly_object = $(patsubst src/arch/$(arch)/%.asm, $(output_dir)/arch/$(arch)/%.o, $(assembly_source))
+
+kernel = $(output_dir)/kernel.bin
+iso = $(output_dir)/os-$(arch).iso
+
+.PHONY:all clean
+
+all: $(kernel) $(iso)
+
+
+mkdir:
+	mkdir -p $(output_dir)/$(grub_dir)
+	mkdir -p $(output_dir)/arch/$(arch)
+
+grub: $(grub_cfg)
+	cp ./$(grub_cfg) $(output_dir)/$(grub_dir)
+
+$(kernel): $(assembly_object)
+	echo $(assembly_object)
+	ld -n -T $(assembly_ld) -o $(kernel) $(assembly_object)
+
+
+$(iso): $(kernel) $(grub_cfg)
+	mkdir -p $(output_dir)/$(iso_dir)
+	mkdir -p $(output_dir)/$(iso_dir)/$(grub_dir)
+
+	cp -r $(grub_cfg) $(output_dir)/$(iso_dir)/$(grub_dir)
+	cp -r $(kernel) $(output_dir)/$(iso_dir)/$(kernel_dir)
+
+	@grub2-mkrescue -o $(iso) $(output_dir)/$(iso_dir)
+
+run:
+	qemu-system-x86_64 -cdrom $(iso)
+
+clean:
+	rm -rf $(output_dir)
+
+# compile assembly file
+$(output_dir)/arch/$(arch)/%.o: $(assembly_dir)/%.asm
+	mkdir -p $(shell dirname $@)
+	nasm -f elf64 $< -o $@
